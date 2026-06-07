@@ -65,11 +65,10 @@ def configure(service: AuthService) -> None:
 
 
 def _get_service() -> AuthService:
-    global _service
     if _service is None:
-        from ..service import AuthService
-
-        _service = AuthService()
+        raise RuntimeError(
+            "FastAPI auth adapter not configured. Call altissimo.auth.fastapi.configure(AuthService(...)) at startup."
+        )
     return _service
 
 

@@ -58,10 +58,12 @@ class TestRequireClaim:
         assert result is firebase_admin_user
 
     def test_rejects_missing_claim(self, firebase_user: FirebaseUser) -> None:
-        with pytest.raises(AuthForbiddenError):
+        with pytest.raises(AuthForbiddenError) as exc:
             AuthPolicyService.require_claim(firebase_user, "admin")
+        assert exc.value.reason_code == AuthReasonCode.INSUFFICIENT_CLAIMS
 
     def test_rejects_wrong_value(self) -> None:
         user = FirebaseUser(uid="uid", custom_claims={"role": "viewer"})
-        with pytest.raises(AuthForbiddenError):
+        with pytest.raises(AuthForbiddenError) as exc:
             AuthPolicyService.require_claim(user, "role", expected="admin")
+        assert exc.value.reason_code == AuthReasonCode.INSUFFICIENT_CLAIMS

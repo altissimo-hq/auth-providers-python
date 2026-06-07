@@ -5,7 +5,7 @@ from .firebase import FirebaseAuthProvider
 from .google import GoogleAuthProvider
 from .iap import IAPProvider
 from .oidc import OIDCPolicy, OIDCProvider
-from .webhooks import WebhookProvider, WebhookVerifier
+from .webhooks import StripeWebhookVerifier, WebhookProvider, WebhookVerifier
 
 __all__ = [
     "APIKeyBackend",
@@ -15,6 +15,7 @@ __all__ = [
     "IAPProvider",
     "OIDCPolicy",
     "OIDCProvider",
+    "StripeWebhookVerifier",
     "WebhookProvider",
     "WebhookVerifier",
 ]

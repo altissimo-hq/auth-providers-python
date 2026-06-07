@@ -42,5 +42,5 @@ class AuthPolicyService:
     def require_claim(user: FirebaseUser, claim: str, expected: Any = True) -> FirebaseUser:
         """Require Firebase user to have a specific custom claim value."""
         if not user.custom_claims or user.custom_claims.get(claim) != expected:
-            raise AuthForbiddenError("Forbidden", reason_code=AuthReasonCode.NOT_ADMIN)
+            raise AuthForbiddenError("Forbidden", reason_code=AuthReasonCode.INSUFFICIENT_CLAIMS)
         return user

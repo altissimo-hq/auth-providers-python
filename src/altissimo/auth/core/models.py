@@ -40,6 +40,7 @@ class AuthReasonCode(StrEnum):
 
     # Authorization
     NOT_ADMIN = "not_admin"
+    INSUFFICIENT_CLAIMS = "insufficient_claims"
 
     # OIDC service account
     INVALID_OIDC_TOKEN = "invalid_oidc_token"
