@@ -31,7 +31,6 @@ __all__ = [
     "AuthError",
     "AuthForbiddenError",
     "AuthNotFoundError",
-    "AuthPrincipal",
     "AuthReasonCode",
     "AuthSource",
     "AuthUnauthorizedError",

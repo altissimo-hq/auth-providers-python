@@ -70,7 +70,7 @@ def test_api_key_invalid(client, mock_service):
 
 
 def test_firebase_valid(client, mock_service):
-    user = FirebaseUser(uid="user-123", email="user@example.com", email_verified=True, disabled=False, claims={})
+    user = FirebaseUser(uid="user-123", email="user@example.com", email_verified=True, disabled=False, custom_claims={})
     mock_service.validate_firebase_user.return_value = user
 
     response = client.get("/private/firebase", headers={"Authorization": "Bearer valid-token"})
@@ -115,7 +115,7 @@ def test_firebase_admin(mock_service):
 
     client = TestClient(app)
     mock_service.validate_firebase_admin.return_value = FirebaseUser(
-        uid="u1", email="a@b", email_verified=True, disabled=False, claims={}
+        uid="u1", email="a@b", email_verified=True, disabled=False, custom_claims={}
     )
     assert client.get("/test", headers={"Authorization": "Bearer t"}).json()["uid"] == "u1"
 

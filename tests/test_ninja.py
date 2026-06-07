@@ -69,7 +69,7 @@ def test_api_key_header_invalid(mock_service, request_factory):
 def test_firebase_valid(mock_service, request_factory):
     auth = FirebaseAuth()
     req = request_factory({"Authorization": "Bearer valid-token"})
-    user = FirebaseUser(uid="user-123", email="user@example.com", email_verified=True, disabled=False, claims={})
+    user = FirebaseUser(uid="user-123", email="user@example.com", email_verified=True, disabled=False, custom_claims={})
     mock_service.validate_firebase_user.return_value = user
 
     result = auth.authenticate(req, token="valid-token")
@@ -156,7 +156,7 @@ def test_firebase_admin(mock_service, request_factory):
     auth = FirebaseAdminAuth()
     req = request_factory()
 
-    user = FirebaseUser(uid="user-123", email="user@example.com", email_verified=True, disabled=False, claims={})
+    user = FirebaseUser(uid="user-123", email="user@example.com", email_verified=True, disabled=False, custom_claims={})
     mock_service.validate_firebase_admin.return_value = user
     assert auth.authenticate(req, token="valid-token").uid == "user-123"
 
