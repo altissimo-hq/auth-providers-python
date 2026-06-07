@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from ..core.models import APIKeyRecord, FirebaseUser, GoogleUser, IAPIdentity
+    from ..providers.jwt import JWTConfig
     from ..providers.oidc import OIDCPolicy
     from ..service import AuthService
 
@@ -338,6 +339,33 @@ class Auth:
 
         return _dependency
 
+    # JWT
+
+    @staticmethod
+    def create_jwt_dependency(config: JWTConfig) -> Callable:
+        """Return a FastAPI dependency for generic JWT verification."""
+
+        async def _dependency(
+            request: Request,
+            credentials: Credentials,
+        ) -> dict[str, Any]:
+            try:
+                payload = _get_service().validate_jwt(credentials.credentials, config)
+                Auth._set_request_auth_context(
+                    request,
+                    auth_source=AuthSource.JWT,
+                    reason_code=AuthReasonCode.OK,
+                    principal_id=payload.get("sub"),
+                    outcome="success",
+                    status_code=status.HTTP_200_OK,
+                )
+                return payload
+            except Exception as exc:
+                Auth._handle_error(request, auth_source=AuthSource.JWT, exc=exc)
+                raise
+
+        return _dependency
+
     # IAP
 
     @staticmethod
@@ -379,5 +407,6 @@ validate_firebase_admin = Auth.validate_firebase_admin
 validate_google_user = Auth.validate_google_user
 validate_google_admin = Auth.validate_google_admin
 create_oidc_dependency = Auth.create_oidc_dependency
+create_jwt_dependency = Auth.create_jwt_dependency
 get_iap_identity = Auth.get_iap_identity
 verify_webhook = Auth.verify_webhook

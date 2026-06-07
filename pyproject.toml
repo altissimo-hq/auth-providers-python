@@ -45,6 +45,9 @@ flask = [
     "flask>=2.0",
     "google-auth-oauthlib>=1.2",
 ]
+jwt = [
+    "pyjwt>=2.8",
+]
 all = [
     "fastapi>=0.100.0",
     "django-ninja>=1.0",
@@ -52,6 +55,7 @@ all = [
     "google-auth>=2.0,<3.0",
     "flask>=2.0",
     "google-auth-oauthlib>=1.2",
+    "pyjwt>=2.8",
 ]
 
 [project.urls]
@@ -86,6 +90,7 @@ django-ninja = ">=1.0"
 django = ">=5.0"
 flask = ">=2.0"
 google-auth-oauthlib = ">=1.2"
+pyjwt = ">=2.8"
 
 [tool.ruff]
 target-version = "py311"
@@ -115,6 +120,7 @@ known-first-party = ["altissimo"]
 "tests/**/*.py" = ["S101", "S105", "S106", "B008"]
 # S105: Enum string values for auth reason codes are not passwords
 "src/altissimo/auth/core/models.py" = ["S105"]
+"src/altissimo/auth/flask/__init__.py" = ["S105", "S107", "S310"]
 # S112: Intentional try-except-continue for audience fallback
 "src/altissimo/auth/providers/oidc.py" = ["S112"]
 

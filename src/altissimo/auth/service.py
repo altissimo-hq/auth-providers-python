@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from .providers.firebase import FirebaseAuthProvider
     from .providers.google import GoogleAuthProvider
     from .providers.iap import IAPProvider
+    from .providers.jwt import JWTConfig
     from .providers.oidc import OIDCPolicy, OIDCProvider
     from .providers.webhooks import WebhookProvider
 
@@ -158,3 +159,20 @@ class AuthService:
         if self._webhook_provider is None:
             raise RuntimeError("WebhookProvider not configured. Pass webhook_provider= to AuthService.")
         return self._webhook_provider.verify(payload, signature)
+
+    # JWT
+
+    def validate_jwt(self, token: str, config: JWTConfig) -> dict[str, Any]:
+        """Validate a JWT token using the provided config."""
+        from .providers.jwt import JWTProvider
+        return JWTProvider.verify(token, config)
+
+    def decode_jwt_unverified(self, token: str) -> dict[str, Any]:
+        """Decode a JWT without signature verification (WARNING: unsafe)."""
+        from .providers.jwt import JWTProvider
+        return JWTProvider.decode_unverified(token)
+
+    def create_jwt(self, payload: dict[str, Any], secret: str, algorithm: str = "HS256") -> str:
+        """Create a signed JWT token."""
+        from .providers.jwt import JWTProvider
+        return JWTProvider.create(payload, secret, algorithm)

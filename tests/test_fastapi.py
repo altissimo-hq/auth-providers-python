@@ -69,6 +69,40 @@ def test_api_key_invalid(client, mock_service):
     assert "Invalid key" in response.text
 
 
+def test_jwt_valid(mock_service):
+    from altissimo.auth.providers.jwt import JWTConfig
+    config = JWTConfig(secret="test")
+    app = FastAPI()
+
+    @app.get("/test")
+    async def get_test(payload: dict = Depends(Auth.create_jwt_dependency(config))):
+        return payload
+
+    client = TestClient(app)
+    mock_service.validate_jwt.return_value = {"sub": "user123"}
+
+    response = client.get("/test", headers={"Authorization": "Bearer token"})
+    assert response.status_code == 200
+    assert response.json() == {"sub": "user123"}
+
+
+def test_jwt_invalid(mock_service):
+    from altissimo.auth.providers.jwt import JWTConfig
+    config = JWTConfig(secret="test")
+    app = FastAPI()
+
+    @app.get("/test")
+    async def get_test(payload: dict = Depends(Auth.create_jwt_dependency(config))):
+        return payload
+
+    client = TestClient(app)
+    mock_service.validate_jwt.side_effect = AuthUnauthorizedError("Bad JWT", reason_code=AuthReasonCode.INVALID_JWT)
+
+    response = client.get("/test", headers={"Authorization": "Bearer bad-token"})
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Bad JWT"
+
+
 def test_firebase_valid(client, mock_service):
     user = FirebaseUser(uid="user-123", email="user@example.com", email_verified=True, disabled=False, custom_claims={})
     mock_service.validate_firebase_user.return_value = user

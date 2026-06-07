@@ -212,6 +212,23 @@ def test_oidc_auth(mock_service, request_factory):
     assert auth.authenticate(req, token="bad") is None
 
 
+def test_jwt_auth(mock_service, request_factory):
+    from altissimo.auth.ninja import JWTAuth
+    from altissimo.auth.providers.jwt import JWTConfig
+
+    config = JWTConfig(secret="test")
+    auth = JWTAuth(config=config)
+    req = request_factory()
+
+    mock_service.validate_jwt.return_value = {"sub": "user123"}
+    assert auth.authenticate(req, token="tok") == {"sub": "user123"}
+
+    mock_service.validate_jwt.side_effect = AuthUnauthorizedError(
+        "e", reason_code=AuthReasonCode.INVALID_JWT
+    )
+    assert auth.authenticate(req, token="bad") is None
+
+
 def test_get_service_unconfigured():
     import altissimo.auth.ninja as n_init
     from altissimo.auth.ninja import _get_service
@@ -250,4 +267,14 @@ def test_log_failure_fallback(request_factory):
             method="GET",
             status_code=401,
             reason_code=AuthReasonCode.INVALID_WEBHOOK_SIGNATURE,
+        )
+
+        _log_failure(req, AuthSource.JWT)
+        mock_log.assert_called_with(
+            event="authn.failure",
+            auth_source="jwt",
+            route="/test",
+            method="GET",
+            status_code=401,
+            reason_code=AuthReasonCode.INVALID_JWT,
         )

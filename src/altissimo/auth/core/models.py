@@ -19,6 +19,7 @@ class AuthSource(StrEnum):
     IAP = "iap"
     SERVICE_ACCOUNT = "service_account"
     WEBHOOK = "webhook"
+    JWT = "jwt"
 
 
 class AuthReasonCode(StrEnum):
@@ -50,6 +51,11 @@ class AuthReasonCode(StrEnum):
     # Webhooks
     INVALID_WEBHOOK_SIGNATURE = "invalid_webhook_signature"
     INVALID_WEBHOOK_PAYLOAD = "invalid_webhook_payload"
+
+    # JWT
+    INVALID_JWT = "invalid_jwt"
+    EXPIRED_JWT = "expired_jwt"
+    INVALID_JWT_ISSUER = "invalid_jwt_issuer"
 
 
 class GoogleTokenInfo(BaseModel):

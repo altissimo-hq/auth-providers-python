@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from django.http import HttpRequest
 
     from ..core.models import APIKeyRecord, FirebaseUser, GoogleUser
+    from ..providers.jwt import JWTConfig
     from ..providers.oidc import OIDCPolicy
     from ..service import AuthService
 
@@ -73,6 +74,8 @@ def _log_failure(request: HttpRequest, auth_source: AuthSource, exc: AuthError |
             reason_code = AuthReasonCode.INVALID_OIDC_TOKEN
         elif auth_source == AuthSource.WEBHOOK:
             reason_code = AuthReasonCode.INVALID_WEBHOOK_SIGNATURE
+        elif auth_source == AuthSource.JWT:
+            reason_code = AuthReasonCode.INVALID_JWT
         else:
             reason_code = AuthReasonCode.INVALID_API_KEY
     log_auth_event(
@@ -208,4 +211,19 @@ class OIDCAuth(NinjaHttpBearer):
             return _get_service().validate_service_account_token(token, env, self._policy)
         except AuthError as e:
             _log_failure(request, AuthSource.SERVICE_ACCOUNT, e)
+            return None
+
+class JWTAuth(NinjaHttpBearer):
+    """Authenticate via generic JWT token."""
+
+    def __init__(self, config: JWTConfig, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._config = config
+
+    def authenticate(self, request: HttpRequest, token: str) -> dict[str, Any] | None:
+        """Verify JWT token and return payload."""
+        try:
+            return _get_service().validate_jwt(token, self._config)
+        except AuthError as e:
+            _log_failure(request, AuthSource.JWT, e)
             return None
