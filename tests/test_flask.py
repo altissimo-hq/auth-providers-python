@@ -56,7 +56,6 @@ def test_handle_callback_success(app, flow_manager):
             mock_credentials.token = "access_token"
             mock_credentials.refresh_token = "refresh_token"
             mock_credentials.client_id = "client_id"
-            mock_credentials.client_secret = "client_secret"
 
             mock_flow.credentials = mock_credentials
             mock_flow_cls.return_value = mock_flow

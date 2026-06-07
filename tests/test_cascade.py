@@ -37,3 +37,20 @@ def test_cascade_returns_none_if_all_fail():
     assert result is None
     assert auth1.called is True
     assert auth2.called is True
+
+
+def test_cascade_catches_exceptions():
+    """Test that AuthCascade catches exceptions and continues."""
+
+    class RaisingAuth:
+        def __call__(self, request):
+            raise ValueError("Something went wrong")
+
+    auth1 = RaisingAuth()
+    auth2 = MockAuth(result="user2")
+
+    cascade = AuthCascade([auth1, auth2])
+    result = cascade("dummy_request")
+
+    assert result == "user2"
+    assert auth2.called is True

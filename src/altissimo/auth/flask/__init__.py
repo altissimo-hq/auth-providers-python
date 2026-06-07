@@ -95,7 +95,6 @@ class OAuth2FlowManager:
         session["google_refresh_token"] = credentials.refresh_token
         session["google_id_token"] = credentials.id_token
         session["google_client_id"] = credentials.client_id
-        session["google_client_secret"] = credentials.client_secret
         session["user_info"] = {
             "id": id_info.get("sub"),
             "email": id_info.get("email"),
@@ -112,7 +111,6 @@ class OAuth2FlowManager:
             "google_refresh_token",
             "google_id_token",
             "google_client_id",
-            "google_client_secret",
             "user_info",
         ]
         for key in keys_to_clear:

@@ -21,6 +21,8 @@ from ninja.security import APIKeyQuery as NinjaAPIKeyQuery
 from ninja.security import HttpBearer as NinjaHttpBearer
 
 from ..core.exceptions import AuthError
+from ..core.models import AuthReasonCode, AuthSource
+from ..core.telemetry import log_auth_event
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -55,6 +57,30 @@ def _get_service() -> AuthService:
     return _service
 
 
+def _log_failure(request: HttpRequest, auth_source: AuthSource, exc: AuthError | None = None) -> None:
+    """Log an auth failure using telemetry."""
+    if exc:
+        reason_code = exc.reason_code
+    elif auth_source == AuthSource.API_KEY:
+        reason_code = AuthReasonCode.MISSING_API_KEY
+    else:
+        # Fallbacks if a token is completely missing for a bearer source
+        if auth_source == AuthSource.FIREBASE:
+            reason_code = AuthReasonCode.INVALID_FIREBASE_TOKEN
+        elif auth_source == AuthSource.GOOGLE:
+            reason_code = AuthReasonCode.INVALID_GOOGLE_TOKEN
+        else:
+            reason_code = AuthReasonCode.INVALID_API_KEY
+    log_auth_event(
+        event="authn.failure",
+        auth_source=auth_source.value,
+        route=request.path,
+        method=request.method,
+        status_code=401,
+        reason_code=reason_code,
+    )
+
+
 class ApiKeyHeaderAuth(NinjaAPIKeyHeader):
     """Authenticate via ``x-api-key`` header."""
 
@@ -63,8 +89,13 @@ class ApiKeyHeaderAuth(NinjaAPIKeyHeader):
     def authenticate(self, request: HttpRequest, key: str | None) -> APIKeyRecord | None:
         """Return APIKeyRecord or None (Ninja treats None as auth failure)."""
         if not key:
+            _log_failure(request, AuthSource.API_KEY)
             return None
-        return _get_service().get_api_key(key)
+        try:
+            return _get_service().get_api_key(key)
+        except AuthError as e:
+            _log_failure(request, AuthSource.API_KEY, e)
+            return None
 
 
 class ApiKeyQueryAuth(NinjaAPIKeyQuery):
@@ -75,8 +106,13 @@ class ApiKeyQueryAuth(NinjaAPIKeyQuery):
     def authenticate(self, request: HttpRequest, key: str | None) -> APIKeyRecord | None:
         """Return APIKeyRecord or None."""
         if not key:
+            _log_failure(request, AuthSource.API_KEY)
             return None
-        return _get_service().get_api_key(key)
+        try:
+            return _get_service().get_api_key(key)
+        except AuthError as e:
+            _log_failure(request, AuthSource.API_KEY, e)
+            return None
 
 
 class ApiKeyAuth(NinjaAPIKeyHeader):
@@ -88,8 +124,13 @@ class ApiKeyAuth(NinjaAPIKeyHeader):
         """Try header, fall back to query param."""
         api_key_id = key or request.GET.get("api_key")
         if not api_key_id:
+            _log_failure(request, AuthSource.API_KEY)
             return None
-        return _get_service().get_api_key(api_key_id)
+        try:
+            return _get_service().get_api_key(api_key_id)
+        except AuthError as e:
+            _log_failure(request, AuthSource.API_KEY, e)
+            return None
 
 
 class FirebaseAuth(NinjaHttpBearer):
@@ -99,7 +140,8 @@ class FirebaseAuth(NinjaHttpBearer):
         """Verify Firebase token and return user, or None on failure."""
         try:
             return _get_service().validate_firebase_user(token)
-        except AuthError:
+        except AuthError as e:
+            _log_failure(request, AuthSource.FIREBASE, e)
             return None
 
 
@@ -110,7 +152,8 @@ class FirebaseAdminAuth(NinjaHttpBearer):
         """Verify Firebase admin token."""
         try:
             return _get_service().validate_firebase_admin(token)
-        except AuthError:
+        except AuthError as e:
+            _log_failure(request, AuthSource.FIREBASE, e)
             return None
 
 
@@ -121,7 +164,8 @@ class GoogleAuth(NinjaHttpBearer):
         """Verify Google token."""
         try:
             return _get_service().validate_google_user(token)
-        except AuthError:
+        except AuthError as e:
+            _log_failure(request, AuthSource.GOOGLE, e)
             return None
 
 
@@ -132,7 +176,8 @@ class GoogleAdminAuth(NinjaHttpBearer):
         """Verify Google admin token."""
         try:
             return _get_service().validate_google_admin(token)
-        except AuthError:
+        except AuthError as e:
+            _log_failure(request, AuthSource.GOOGLE, e)
             return None
 
 
@@ -157,5 +202,6 @@ class OIDCAuth(NinjaHttpBearer):
         env = self._env or os.environ.get("ENV", "dev")
         try:
             return _get_service().validate_service_account_token(token, env, self._policy)
-        except AuthError:
+        except AuthError as e:
+            _log_failure(request, AuthSource.SERVICE_ACCOUNT, e)
             return None

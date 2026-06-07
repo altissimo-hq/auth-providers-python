@@ -52,15 +52,6 @@ class AuthReasonCode(StrEnum):
     INVALID_WEBHOOK_PAYLOAD = "invalid_webhook_payload"
 
 
-class AuthPrincipal(BaseModel):
-    """Normalized authenticated principal."""
-
-    source: AuthSource
-    subject: str
-    email: EmailStr | None = None
-    admin: bool = False
-
-
 class GoogleTokenInfo(BaseModel):
     """Google OAuth2 ID token payload."""
 

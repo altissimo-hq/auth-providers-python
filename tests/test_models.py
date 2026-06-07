@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from altissimo.auth.core.models import (
     APIKeyRecord,
-    AuthPrincipal,
     AuthReasonCode,
     AuthSource,
     FirebaseUser,
@@ -78,10 +77,3 @@ class TestIAPIdentity:
         identity = IAPIdentity()
         assert identity.email is None
         assert identity.user_id is None
-
-
-class TestAuthPrincipal:
-    def test_creation(self) -> None:
-        principal = AuthPrincipal(source=AuthSource.FIREBASE, subject="uid-1", email="user@test.com")
-        assert principal.source == AuthSource.FIREBASE
-        assert principal.admin is False

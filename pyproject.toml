@@ -112,7 +112,7 @@ select = [
 known-first-party = ["altissimo"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "S105"]
+"tests/**/*.py" = ["S101", "S105", "S106", "B008"]
 # S105: Enum string values for auth reason codes are not passwords
 "src/altissimo/auth/core/models.py" = ["S105"]
 # S112: Intentional try-except-continue for audience fallback

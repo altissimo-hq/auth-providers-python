@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import django
 import pytest
+from django.conf import settings
+
+if not settings.configured:
+    settings.configure()
+    django.setup()
 
 from altissimo.auth.core.models import APIKeyRecord, FirebaseUser, GoogleUser
 

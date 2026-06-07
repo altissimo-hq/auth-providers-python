@@ -13,7 +13,6 @@ from .core.exceptions import (
 )
 from .core.models import (
     APIKeyRecord,
-    AuthPrincipal,
     AuthReasonCode,
     AuthSource,
     FirebaseUser,
