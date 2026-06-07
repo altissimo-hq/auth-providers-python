@@ -89,3 +89,136 @@ def test_firebase_invalid(client, mock_service):
 
     assert response.status_code == 401
     assert "Invalid token" in response.text
+
+
+def test_api_key_optional(mock_service):
+    app = FastAPI()
+
+    @app.get("/test")
+    async def route(key=Depends(Auth.validate_api_key_optional)):
+        return {"id": key.id} if key else {"id": None}
+
+    client = TestClient(app)
+    mock_service.validate_api_key_optional.return_value = None
+    assert client.get("/test").json()["id"] is None
+
+    mock_service.validate_api_key_optional.return_value = MagicMock(id="k1")
+    assert client.get("/test", headers={"x-api-key": "test"}).json()["id"] == "k1"
+
+
+def test_firebase_admin(mock_service):
+    app = FastAPI()
+
+    @app.get("/test")
+    async def route(user=Depends(Auth.validate_firebase_admin)):
+        return {"uid": user.uid}
+
+    client = TestClient(app)
+    mock_service.validate_firebase_admin.return_value = FirebaseUser(
+        uid="u1", email="a@b", email_verified=True, disabled=False, claims={}
+    )
+    assert client.get("/test", headers={"Authorization": "Bearer t"}).json()["uid"] == "u1"
+
+
+def test_google_user(mock_service):
+    app = FastAPI()
+    from altissimo.auth.core.models import GoogleUser
+
+    @app.get("/test")
+    async def route(user=Depends(Auth.validate_google_user)):
+        return {"email": user.email}
+
+    client = TestClient(app)
+    mock_service.validate_google_user.return_value = GoogleUser(
+        id="user1", email="a@b.com", email_verified=True, sub="sub"
+    )
+    assert client.get("/test", headers={"Authorization": "Bearer t"}).json()["email"] == "a@b.com"
+
+
+def test_google_admin(mock_service):
+    app = FastAPI()
+    from altissimo.auth.core.models import GoogleUser
+
+    @app.get("/test")
+    async def route(user=Depends(Auth.validate_google_admin)):
+        return {"email": user.email}
+
+    client = TestClient(app)
+    mock_service.validate_google_admin.return_value = GoogleUser(
+        id="user1", email="a@b.com", email_verified=True, sub="sub"
+    )
+    assert client.get("/test", headers={"Authorization": "Bearer t"}).json()["email"] == "a@b.com"
+
+
+def test_oidc_dependency(mock_service):
+    app = FastAPI()
+    from altissimo.auth.providers.oidc import OIDCPolicy
+
+    oidc = Auth.create_oidc_dependency(OIDCPolicy(valid_audiences=["aud"], allowed_callers=["a@b.com"]))
+
+    @app.get("/test")
+    async def route(caller=Depends(oidc)):
+        return {"caller": caller}
+
+    client = TestClient(app)
+    mock_service.validate_service_account_token.return_value = "a@b.com"
+    assert client.get("/test", headers={"Authorization": "Bearer t"}).json()["caller"] == "a@b.com"
+
+
+def test_iap_identity(mock_service):
+    app = FastAPI()
+    from altissimo.auth.core.models import IAPIdentity
+
+    @app.get("/test")
+    async def route(identity=Depends(Auth.get_iap_identity)):
+        return {"email": identity.email}
+
+    client = TestClient(app)
+    mock_service.get_iap_identity.return_value = IAPIdentity(email="a@b.com", sub="sub")
+    assert client.get("/test", headers={"X-Goog-IAP-JWT-Assertion": "t"}).json()["email"] == "a@b.com"
+
+
+def test_webhook(mock_service):
+    from fastapi import Request
+
+    from altissimo.auth.fastapi import Auth
+
+    mock_req = MagicMock(spec=Request)
+    mock_service.verify_webhook.return_value = {"ok": True}
+
+    result = Auth.verify_webhook(mock_req, payload=b"body", signature="sig")
+    assert result["ok"] is True
+    mock_service.verify_webhook.assert_called_with(b"body", "sig")
+
+
+def test_handle_error_mappings(mock_service):
+    from altissimo.auth.core.exceptions import AuthForbiddenError, AuthNotFoundError
+    from altissimo.auth.core.models import AuthReasonCode
+    from altissimo.auth.fastapi import Auth
+
+    app = FastAPI()
+
+    @app.get("/forbidden")
+    async def route_forbidden(user=Depends(Auth.validate_api_key)):
+        pass
+
+    @app.get("/notfound")
+    async def route_notfound(user=Depends(Auth.validate_api_key)):
+        pass
+
+    client = TestClient(app)
+
+    mock_service.validate_api_key.side_effect = AuthForbiddenError("f", reason_code=AuthReasonCode.NOT_ADMIN)
+    assert client.get("/forbidden").status_code == 403
+
+    mock_service.validate_api_key.side_effect = AuthNotFoundError("n", reason_code=AuthReasonCode.NOT_ADMIN)
+    assert client.get("/notfound").status_code == 404
+
+
+def test_get_service_unconfigured():
+    import altissimo.auth.fastapi as f_init
+    from altissimo.auth.fastapi import _get_service
+
+    f_init._service = None
+    with pytest.raises(RuntimeError):
+        _get_service()

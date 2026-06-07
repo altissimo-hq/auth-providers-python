@@ -1,6 +1,6 @@
 [project]
 name = "altissimo-auth"
-version = "0.1.0"
+version = "1.0.0"
 description = "Reusable, framework-agnostic authentication library for Altissimo projects."
 readme = "README.md"
 license = "Apache-2.0"

@@ -151,8 +151,16 @@ def test_logout(app, flow_manager):
     with app.test_request_context("/logout"):
         session["oauth_state"] = "state123"
         session["user_info"] = {"id": "12345"}
+        session["google_token"] = "access"
+        session["google_refresh_token"] = "refresh"
+        session["google_id_token"] = "id"
+        session["google_client_id"] = "client"
 
         flow_manager.logout()
 
         assert "oauth_state" not in session
         assert "user_info" not in session
+        assert "google_token" not in session
+        assert "google_refresh_token" not in session
+        assert "google_id_token" not in session
+        assert "google_client_id" not in session

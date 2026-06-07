@@ -89,3 +89,165 @@ def test_firebase_invalid(mock_service, request_factory):
 
     assert result is None
     mock_service.validate_firebase_user.assert_called_once_with("invalid-token")
+
+
+def test_api_key_query_valid(mock_service, request_factory):
+    from altissimo.auth.ninja import ApiKeyQueryAuth
+
+    auth = ApiKeyQueryAuth()
+    req = request_factory()
+    req.GET = {"api_key": "query-key"}
+    mock_service.get_api_key.return_value = APIKeyRecord(id="k-1", name="t")
+
+    result = auth.authenticate(req, key="query-key")
+
+    assert result.id == "k-1"
+    mock_service.get_api_key.assert_called_once_with("query-key")
+
+
+def test_api_key_query_invalid(mock_service, request_factory):
+    from altissimo.auth.ninja import ApiKeyQueryAuth
+
+    auth = ApiKeyQueryAuth()
+    req = request_factory()
+    req.GET = {}
+    result = auth.authenticate(req, key=None)
+    assert result is None
+
+    req.GET = {"api_key": "bad"}
+    mock_service.get_api_key.side_effect = AuthUnauthorizedError("err", reason_code=AuthReasonCode.INVALID_API_KEY)
+    result = auth.authenticate(req, key="bad")
+    assert result is None
+
+
+def test_api_key_auth_combined(mock_service, request_factory):
+    from altissimo.auth.ninja import ApiKeyAuth
+
+    auth = ApiKeyAuth()
+    req = request_factory({"X-API-KEY": "hdr-key"})
+    req.GET = {}
+    mock_service.get_api_key.return_value = APIKeyRecord(id="k-2", name="t")
+
+    # Try header
+    result = auth.authenticate(req, key="hdr-key")
+    assert result.id == "k-2"
+
+    # Try query
+    req = request_factory()
+    req.GET = {"api_key": "qry-key"}
+    result = auth.authenticate(req, key=None)
+    assert result.id == "k-2"
+
+    # Missing
+    req = request_factory()
+    req.GET = {}
+    result = auth.authenticate(req, key=None)
+    assert result is None
+
+    # Exception
+    mock_service.get_api_key.side_effect = AuthUnauthorizedError("err", reason_code=AuthReasonCode.INVALID_API_KEY)
+    result = auth.authenticate(req, key="qry-key")
+    assert result is None
+
+
+def test_firebase_admin(mock_service, request_factory):
+    from altissimo.auth.ninja import FirebaseAdminAuth
+
+    auth = FirebaseAdminAuth()
+    req = request_factory()
+
+    user = FirebaseUser(uid="user-123", email="user@example.com", email_verified=True, disabled=False, claims={})
+    mock_service.validate_firebase_admin.return_value = user
+    assert auth.authenticate(req, token="valid-token").uid == "user-123"
+
+    mock_service.validate_firebase_admin.side_effect = AuthUnauthorizedError("e", reason_code=AuthReasonCode.NOT_ADMIN)
+    assert auth.authenticate(req, token="bad") is None
+
+
+def test_google_auth(mock_service, request_factory):
+    from altissimo.auth.core.models import GoogleUser
+    from altissimo.auth.ninja import GoogleAuth
+
+    auth = GoogleAuth()
+    req = request_factory()
+
+    user = GoogleUser(id="user1", email="u@test.com", email_verified=True, sub="sub")
+    mock_service.validate_google_user.return_value = user
+    assert auth.authenticate(req, token="valid-token").email == "u@test.com"
+
+    mock_service.validate_google_user.side_effect = AuthUnauthorizedError(
+        "e", reason_code=AuthReasonCode.INVALID_GOOGLE_TOKEN
+    )
+    assert auth.authenticate(req, token="bad") is None
+
+
+def test_google_admin_auth(mock_service, request_factory):
+    from altissimo.auth.core.models import GoogleUser
+    from altissimo.auth.ninja import GoogleAdminAuth
+
+    auth = GoogleAdminAuth()
+    req = request_factory()
+
+    user = GoogleUser(id="user1", email="u@test.com", email_verified=True, sub="sub")
+    mock_service.validate_google_admin.return_value = user
+    assert auth.authenticate(req, token="valid-token").email == "u@test.com"
+
+    mock_service.validate_google_admin.side_effect = AuthUnauthorizedError("e", reason_code=AuthReasonCode.NOT_ADMIN)
+    assert auth.authenticate(req, token="bad") is None
+
+
+def test_oidc_auth(mock_service, request_factory):
+    from altissimo.auth.ninja import OIDCAuth
+    from altissimo.auth.providers.oidc import OIDCPolicy
+
+    auth = OIDCAuth(policy=OIDCPolicy(valid_audiences=["aud"], allowed_callers=["c1"]), env="prod")
+    req = request_factory()
+
+    mock_service.validate_service_account_token.return_value = "c1"
+    assert auth.authenticate(req, token="tok") == "c1"
+
+    mock_service.validate_service_account_token.side_effect = AuthUnauthorizedError(
+        "e", reason_code=AuthReasonCode.UNAUTHORIZED_CALLER
+    )
+    assert auth.authenticate(req, token="bad") is None
+
+
+def test_get_service_unconfigured():
+    import altissimo.auth.ninja as n_init
+    from altissimo.auth.ninja import _get_service
+
+    n_init._service = None
+    with pytest.raises(RuntimeError):
+        _get_service()
+
+
+def test_log_failure_fallback(request_factory):
+    from unittest.mock import patch
+
+    from altissimo.auth.core.models import AuthReasonCode, AuthSource
+    from altissimo.auth.ninja import _log_failure
+
+    req = request_factory()
+    req.path = "/test"
+    req.method = "GET"
+
+    with patch("altissimo.auth.ninja.log_auth_event") as mock_log:
+        _log_failure(req, AuthSource.SERVICE_ACCOUNT)
+        mock_log.assert_called_with(
+            event="authn.failure",
+            auth_source="service_account",
+            route="/test",
+            method="GET",
+            status_code=401,
+            reason_code=AuthReasonCode.INVALID_OIDC_TOKEN,
+        )
+
+        _log_failure(req, AuthSource.WEBHOOK)
+        mock_log.assert_called_with(
+            event="authn.failure",
+            auth_source="webhook",
+            route="/test",
+            method="GET",
+            status_code=401,
+            reason_code=AuthReasonCode.INVALID_WEBHOOK_SIGNATURE,
+        )

@@ -69,6 +69,10 @@ def _log_failure(request: HttpRequest, auth_source: AuthSource, exc: AuthError |
             reason_code = AuthReasonCode.INVALID_FIREBASE_TOKEN
         elif auth_source == AuthSource.GOOGLE:
             reason_code = AuthReasonCode.INVALID_GOOGLE_TOKEN
+        elif auth_source == AuthSource.SERVICE_ACCOUNT:
+            reason_code = AuthReasonCode.INVALID_OIDC_TOKEN
+        elif auth_source == AuthSource.WEBHOOK:
+            reason_code = AuthReasonCode.INVALID_WEBHOOK_SIGNATURE
         else:
             reason_code = AuthReasonCode.INVALID_API_KEY
     log_auth_event(
