@@ -6,7 +6,7 @@
 
 If you discover a security vulnerability in `altissimo-auth`, please report it responsibly by emailing:
 
-📧 **security@altissimo.dev**
+📧 **<security@altissimo.dev>**
 
 Please include:
 
