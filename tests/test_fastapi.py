@@ -71,6 +71,7 @@ def test_api_key_invalid(client, mock_service):
 
 def test_jwt_valid(mock_service):
     from altissimo.auth.providers.jwt import JWTConfig
+
     config = JWTConfig(secret="test")
     app = FastAPI()
 
@@ -88,6 +89,7 @@ def test_jwt_valid(mock_service):
 
 def test_jwt_invalid(mock_service):
     from altissimo.auth.providers.jwt import JWTConfig
+
     config = JWTConfig(secret="test")
     app = FastAPI()
 

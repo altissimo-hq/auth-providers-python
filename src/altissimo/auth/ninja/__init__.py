@@ -213,6 +213,7 @@ class OIDCAuth(NinjaHttpBearer):
             _log_failure(request, AuthSource.SERVICE_ACCOUNT, e)
             return None
 
+
 class JWTAuth(NinjaHttpBearer):
     """Authenticate via generic JWT token."""
 

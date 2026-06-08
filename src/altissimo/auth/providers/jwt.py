@@ -74,9 +74,7 @@ class JWTProvider:
         if config.allowed_issuers:
             issuer = payload.get("iss")
             if not issuer or issuer not in config.allowed_issuers:
-                raise AuthUnauthorizedError(
-                    f"Invalid issuer: {issuer}", reason_code=AuthReasonCode.INVALID_JWT_ISSUER
-                )
+                raise AuthUnauthorizedError(f"Invalid issuer: {issuer}", reason_code=AuthReasonCode.INVALID_JWT_ISSUER)
 
         return payload
 

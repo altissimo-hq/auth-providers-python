@@ -1,5 +1,6 @@
-from unittest.mock import MagicMock, patch
 import json
+from unittest.mock import MagicMock, patch
+
 import pytest
 from flask import Flask, g, session
 
@@ -113,11 +114,13 @@ def test_handle_callback_success_access_token(app):
 
             with patch("urllib.request.urlopen") as mock_urlopen:
                 mock_response = MagicMock()
-                mock_response.read.return_value = json.dumps({
-                    "sub": "12345",
-                    "email": "user@example.com",
-                    "hd": "example.com",
-                }).encode("utf-8")
+                mock_response.read.return_value = json.dumps(
+                    {
+                        "sub": "12345",
+                        "email": "user@example.com",
+                        "hd": "example.com",
+                    }
+                ).encode("utf-8")
                 mock_urlopen.return_value.__enter__.return_value = mock_response
 
                 user_info = flow_manager.handle_callback()
@@ -184,7 +187,7 @@ def test_validate_session_access_token(app):
             mock_response = MagicMock()
             mock_response.read.return_value = json.dumps({"sub": "12345", "hd": "example.com"}).encode("utf-8")
             mock_urlopen.return_value.__enter__.return_value = mock_response
-            
+
             user_info = flow_manager.validate_session()
             assert user_info["id"] == "12345"
 

@@ -223,9 +223,7 @@ def test_jwt_auth(mock_service, request_factory):
     mock_service.validate_jwt.return_value = {"sub": "user123"}
     assert auth.authenticate(req, token="tok") == {"sub": "user123"}
 
-    mock_service.validate_jwt.side_effect = AuthUnauthorizedError(
-        "e", reason_code=AuthReasonCode.INVALID_JWT
-    )
+    mock_service.validate_jwt.side_effect = AuthUnauthorizedError("e", reason_code=AuthReasonCode.INVALID_JWT)
     assert auth.authenticate(req, token="bad") is None
 
 

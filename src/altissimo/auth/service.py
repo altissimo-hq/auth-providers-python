@@ -165,14 +165,17 @@ class AuthService:
     def validate_jwt(self, token: str, config: JWTConfig) -> dict[str, Any]:
         """Validate a JWT token using the provided config."""
         from .providers.jwt import JWTProvider
+
         return JWTProvider.verify(token, config)
 
     def decode_jwt_unverified(self, token: str) -> dict[str, Any]:
         """Decode a JWT without signature verification (WARNING: unsafe)."""
         from .providers.jwt import JWTProvider
+
         return JWTProvider.decode_unverified(token)
 
     def create_jwt(self, payload: dict[str, Any], secret: str, algorithm: str = "HS256") -> str:
         """Create a signed JWT token."""
         from .providers.jwt import JWTProvider
+
         return JWTProvider.create(payload, secret, algorithm)
