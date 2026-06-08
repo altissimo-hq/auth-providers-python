@@ -126,7 +126,7 @@ class FirebaseUser(BaseModel):
     photo_url: str | None = None
     provider_id: str | None = None
     tenant_id: str | None = None
-    tokens_valid_after_timestamp: str | None = None
+    tokens_valid_after_timestamp: int | str | None = None
     custom_claims: dict[str, Any] | None = None
     provider_data: list[dict[str, Any]] = Field(default_factory=list)
 

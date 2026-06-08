@@ -11,7 +11,13 @@ from altissimo.auth.core.models import AuthReasonCode
 from altissimo.auth.providers.firebase import FirebaseAuthProvider
 
 
-def _mock_user_record(*, uid: str = "uid-1", disabled: bool = False, admin: bool = False):
+def _mock_user_record(
+    *,
+    uid: str = "uid-1",
+    disabled: bool = False,
+    admin: bool = False,
+    tokens_valid_after_timestamp: int | str | None = None,
+) -> MagicMock:
     """Create a mock firebase_admin UserRecord."""
     record = MagicMock()
     record.uid = uid
@@ -23,7 +29,7 @@ def _mock_user_record(*, uid: str = "uid-1", disabled: bool = False, admin: bool
     record.photo_url = None
     record.provider_id = "firebase"
     record.tenant_id = None
-    record.tokens_valid_after_timestamp = None
+    record.tokens_valid_after_timestamp = tokens_valid_after_timestamp
     record.custom_claims = {"admin": True} if admin else {}
     record.provider_data = []
     return record
@@ -70,3 +76,13 @@ class TestFirebaseAuthProvider:
         with pytest.raises(AuthForbiddenError) as exc:
             FirebaseAuthProvider.verify_token("token-for-disabled")
         assert exc.value.reason_code == AuthReasonCode.USER_DISABLED
+
+    @patch("altissimo.auth.providers.firebase.firebase_auth")
+    def test_verify_token_with_timestamp_int(self, mock_auth: MagicMock) -> None:
+        mock_auth.verify_id_token.return_value = {"uid": "uid-1"}
+        mock_auth.get_user.return_value = _mock_user_record(tokens_valid_after_timestamp=1780928613000)
+
+        user = FirebaseAuthProvider.verify_token("valid-token")
+
+        assert user.uid == "uid-1"
+        assert user.tokens_valid_after_timestamp == 1780928613000
