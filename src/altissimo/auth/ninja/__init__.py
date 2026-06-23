@@ -14,7 +14,7 @@ Usage::
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from ninja.security import APIKeyHeader as NinjaAPIKeyHeader
 from ninja.security import APIKeyQuery as NinjaAPIKeyQuery
@@ -230,6 +230,19 @@ class JWTAuth(NinjaHttpBearer):
             return None
 
 
+@runtime_checkable
+class IdentityAuth(Protocol):
+    """Protocol for identity auth providers used with :class:`LayeredAuth`.
+
+    Any class that implements ``authenticate(request, token) -> Any | None``
+    can be used as the ``identity`` parameter of :class:`LayeredAuth`.
+    All built-in bearer auth classes (``FirebaseAuth``, ``GoogleAuth``,
+    ``OIDCAuth``, ``JWTAuth``) satisfy this protocol.
+    """
+
+    def authenticate(self, request: Any, token: str) -> Any | None: ...  # pragma: no cover
+
+
 class LayeredAuth:
     """Layered auth — required gate + optional identity enrichment.
 
@@ -272,16 +285,18 @@ class LayeredAuth:
     # but request.auth is explicitly set to None in __call__ for clean ergonomics.
     _ANONYMOUS = object()
 
-    def __init__(self, gate: Any, identity: NinjaHttpBearer) -> None:
+    def __init__(self, gate: Any, identity: IdentityAuth) -> None:
         """Initialize with a required gate and an optional identity auth.
 
         Args:
             gate: A Django Ninja auth class whose ``__call__`` returns a truthy
                 value on success or ``None`` on failure. Typically an
                 ``ApiKeyAuth`` instance.
-            identity: A ``NinjaHttpBearer`` subclass (e.g. ``FirebaseAuth``)
-                whose ``authenticate(request, token)`` is called when a
-                ``Bearer`` token is present.
+            identity: Any object implementing the :class:`IdentityAuth`
+                protocol (i.e. an ``authenticate(request, token)`` method).
+                All built-in bearer auth classes work here, but custom
+                identity providers (cookies, device tokens, etc.) are also
+                supported.
         """
         self._gate = gate
         self._identity = identity
