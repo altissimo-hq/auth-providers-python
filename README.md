@@ -21,6 +21,7 @@ Reusable, framework-agnostic authentication library for Python applications.
 - 🌊 **Auth Cascade** for multi-method authentication fallback
 - 🧅 **Layered Auth** for required gate + optional identity (BFF pattern)
 - 📐 **Typed** — full type annotations with `py.typed` PEP 561 marker
+- 🧪 **Testing stubs** — drop-in test helpers that eliminate ~100 lines of conftest boilerplate
 
 ## Requirements
 
@@ -144,6 +145,24 @@ def logout():
 @auth.require_auth
 def protected():
     return f"Hello, {g.user.email}"  # g.user is populated by require_auth
+```
+
+### Testing
+
+```python
+# conftest.py — runs before Django is configured
+from altissimo.auth.testing import install_test_modules, StubApiKeyAuth
+
+class MyApiKeyAuth(StubApiKeyAuth):
+    def authenticate(self, request, key):
+        api_key_id = key or request.GET.get("api_key")
+        if not api_key_id:
+            return None
+        return MyBackend().get_key(api_key_id)
+
+install_test_modules(api_key_auth_class=MyApiKeyAuth)
+
+# Now configure Django and import your app normally...
 ```
 
 ### OIDC Service-to-Service
