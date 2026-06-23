@@ -388,3 +388,29 @@ class TestLayeredAuth:
         assert "FirebaseAuth" in schemes
         assert schemes["ApiKeyAuth"]["type"] == "apiKey"
         assert schemes["FirebaseAuth"]["type"] == "http"
+
+    def test_identity_with_mixed_case_meta_header(self, layered, mock_service):
+        """Bearer token is found even when META key is mixed-case (Ninja TestClient)."""
+        mock_service.get_api_key.return_value = APIKeyRecord(id="key-1")
+        user = FirebaseUser(
+            uid="user-1",
+            email="u@test.com",
+            email_verified=True,
+            disabled=False,
+            custom_claims={},
+        )
+        mock_service.validate_firebase_user.return_value = user
+
+        # Simulate Ninja TestClient: mixed-case META key instead of uppercased
+        req = HttpRequest()
+        req.META = {
+            "HTTP_X_API_KEY": "valid-key",
+            "HTTP_Authorization": "Bearer valid-token",  # mixed case!
+        }
+        req.GET = {}
+
+        result = layered(req)
+
+        assert result is not None
+        assert result.uid == "user-1"
+        mock_service.validate_firebase_user.assert_called_once_with("valid-token")

@@ -328,7 +328,7 @@ class LayeredAuth:
         request.gate_auth = gate_result
 
         # --- Identity (optional) ---
-        auth_header = request.META.get("HTTP_AUTHORIZATION", "")
+        auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             token = auth_header[7:].strip()
             if not token:
