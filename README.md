@@ -19,6 +19,7 @@ Reusable, framework-agnostic authentication library for Python applications.
 - 🥷 **Django Ninja** adapter with native auth classes
 - 🧪 **Flask** adapter for server-side Google OAuth2 Authorization Code flow
 - 🌊 **Auth Cascade** for multi-method authentication fallback
+- 🧅 **Layered Auth** for required gate + optional identity (BFF pattern)
 - 📐 **Typed** — full type annotations with `py.typed` PEP 561 marker
 
 ## Requirements
@@ -92,6 +93,20 @@ cascade = AuthCascade([FirebaseAuth(), ApiKeyAuth()])
 @api.get("/me", auth=cascade)
 def get_me(request):
     user = request.auth  # Will be FirebaseUser or APIKeyRecord
+    ...
+
+# Layered Auth (Required Gate + Optional Identity)
+from altissimo.auth.ninja import LayeredAuth
+
+public_auth = LayeredAuth(
+    gate=ApiKeyAuth(),        # MUST pass — 401 if it fails
+    identity=FirebaseAuth(),  # OPTIONAL — enriches request.auth if present
+)
+
+@api.get("/communities", auth=public_auth)
+def list_communities(request):
+    user = request.auth       # FirebaseUser | None
+    api_key = request.gate_auth  # APIKeyRecord (always available)
     ...
 ```
 

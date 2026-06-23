@@ -276,3 +276,115 @@ def test_log_failure_fallback(request_factory):
             status_code=401,
             reason_code=AuthReasonCode.INVALID_JWT,
         )
+
+
+# ── LayeredAuth tests ──────────────────────────────────────────────────
+
+
+class TestLayeredAuth:
+    """Tests for LayeredAuth (required gate + optional identity)."""
+
+    @pytest.fixture
+    def gate(self, mock_service):
+        from altissimo.auth.ninja import ApiKeyAuth
+
+        return ApiKeyAuth()
+
+    @pytest.fixture
+    def identity(self, mock_service):
+        from altissimo.auth.ninja import FirebaseAuth
+
+        return FirebaseAuth()
+
+    @pytest.fixture
+    def layered(self, gate, identity):
+        from altissimo.auth.ninja import LayeredAuth
+
+        return LayeredAuth(gate=gate, identity=identity)
+
+    def test_gate_fail_returns_none(self, layered, mock_service, request_factory):
+        """When the gate (API key) fails, return None → 401."""
+        mock_service.get_api_key.side_effect = AuthUnauthorizedError(
+            "Invalid key", reason_code=AuthReasonCode.INVALID_API_KEY
+        )
+        req = request_factory({"X-API-KEY": "bad-key"})
+        req.GET = {}
+
+        result = layered(req)
+
+        assert result is None
+
+    def test_gate_pass_identity_pass(self, layered, mock_service, request_factory):
+        """Gate passes + valid Bearer token → request.auth = FirebaseUser."""
+        mock_service.get_api_key.return_value = APIKeyRecord(id="key-1")
+        user = FirebaseUser(
+            uid="user-1",
+            email="u@test.com",
+            email_verified=True,
+            disabled=False,
+            custom_claims={},
+        )
+        mock_service.validate_firebase_user.return_value = user
+
+        req = request_factory({"X-API-KEY": "valid-key", "Authorization": "Bearer valid-token"})
+        req.GET = {}
+
+        result = layered(req)
+
+        assert result is not None
+        assert result.uid == "user-1"
+        mock_service.get_api_key.assert_called_once()
+        mock_service.validate_firebase_user.assert_called_once_with("valid-token")
+
+    def test_gate_pass_no_identity(self, layered, mock_service, request_factory):
+        """Gate passes + no Bearer token → anonymous (truthy sentinel), request.auth = None."""
+        mock_service.get_api_key.return_value = APIKeyRecord(id="key-1")
+
+        req = request_factory({"X-API-KEY": "valid-key"})
+        req.GET = {}
+
+        result = layered(req)
+
+        assert result is not None  # Truthy sentinel — Ninja treats as auth success
+        assert req.auth is None  # Anonymous
+        mock_service.validate_firebase_user.assert_not_called()
+
+    def test_gate_pass_bad_identity(self, layered, mock_service, request_factory):
+        """Gate passes + invalid Bearer token → strict rejection → None (401)."""
+        mock_service.get_api_key.return_value = APIKeyRecord(id="key-1")
+        mock_service.validate_firebase_user.side_effect = AuthUnauthorizedError(
+            "Invalid token", reason_code=AuthReasonCode.INVALID_FIREBASE_TOKEN
+        )
+
+        req = request_factory({"X-API-KEY": "valid-key", "Authorization": "Bearer bad-token"})
+        req.GET = {}
+
+        result = layered(req)
+
+        assert result is None
+        mock_service.validate_firebase_user.assert_called_once_with("bad-token")
+
+    def test_gate_result_stashed(self, layered, mock_service, request_factory):
+        """Gate result is stashed on request.gate_auth for downstream access."""
+        key_record = APIKeyRecord(id="key-1")
+        mock_service.get_api_key.return_value = key_record
+
+        req = request_factory({"X-API-KEY": "valid-key"})
+        req.GET = {}
+
+        layered(req)
+
+        assert req.gate_auth is key_record
+
+    def test_openapi_security_schema_from_gate(self, layered):
+        """LayeredAuth exposes the gate's openapi_security_schema for Ninja's schema builder."""
+        assert hasattr(layered, "openapi_security_schema")
+        assert layered.openapi_security_schema["type"] == "apiKey"
+
+    def test_openapi_security_schemas_merged(self, layered):
+        """openapi_security_schemas (plural) returns both gate and identity schemas."""
+        schemes = layered.openapi_security_schemas
+        assert "ApiKeyAuth" in schemes
+        assert "FirebaseAuth" in schemes
+        assert schemes["ApiKeyAuth"]["type"] == "apiKey"
+        assert schemes["FirebaseAuth"]["type"] == "http"

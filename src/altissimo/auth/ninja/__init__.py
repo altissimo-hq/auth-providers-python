@@ -228,3 +228,124 @@ class JWTAuth(NinjaHttpBearer):
         except AuthError as e:
             _log_failure(request, AuthSource.JWT, e)
             return None
+
+
+class LayeredAuth:
+    """Layered auth — required gate + optional identity enrichment.
+
+    This implements the standard BFF (Backend-For-Frontend) pattern where
+    an API key gate is always required, and a user identity (e.g. Firebase)
+    is optionally checked when a Bearer token is present.
+
+    Usage with Django Ninja::
+
+        from altissimo.auth.ninja import LayeredAuth, ApiKeyAuth, FirebaseAuth
+
+        public_auth = LayeredAuth(
+            gate=ApiKeyAuth(),        # MUST pass — 401 if it fails
+            identity=FirebaseAuth(),  # OPTIONAL — enriches request.auth if present
+        )
+
+        @api.get("/communities", auth=public_auth)
+        def list_communities(request):
+            user = request.auth  # FirebaseUser | None
+            api_key = request.gate_auth  # APIKeyRecord
+            ...
+
+    Behavior:
+
+    ============  ==================  ==========================================
+    API Key       Bearer Token        Result
+    ============  ==================  ==========================================
+    ❌ Missing    —                   401 (gate failed)
+    ❌ Invalid    —                   401 (gate failed)
+    ✅ Valid      ❌ Not present      ``request.auth = None`` (anonymous)
+    ✅ Valid      ✅ Valid Firebase   ``request.auth = FirebaseUser``
+    ✅ Valid      ❌ Invalid/expired  401 (strict: bad credentials rejected)
+    ============  ==================  ==========================================
+    """
+
+    # Sentinel used to signal "authenticated but anonymous" to Django Ninja.
+    # Ninja treats any truthy return from __call__ as success and assigns the
+    # value to request.auth.  We use a dedicated sentinel so that downstream
+    # code can distinguish "anonymous via LayeredAuth" from other truthy values,
+    # but request.auth is explicitly set to None in __call__ for clean ergonomics.
+    _ANONYMOUS = object()
+
+    def __init__(self, gate: Any, identity: NinjaHttpBearer) -> None:
+        """Initialize with a required gate and an optional identity auth.
+
+        Args:
+            gate: A Django Ninja auth class whose ``__call__`` returns a truthy
+                value on success or ``None`` on failure. Typically an
+                ``ApiKeyAuth`` instance.
+            identity: A ``NinjaHttpBearer`` subclass (e.g. ``FirebaseAuth``)
+                whose ``authenticate(request, token)`` is called when a
+                ``Bearer`` token is present.
+        """
+        self._gate = gate
+        self._identity = identity
+
+        # Expose the gate's OpenAPI security schema so Ninja's built-in schema
+        # builder registers it.  For the identity scheme, users can access
+        # openapi_security_schemas (plural) or register identity separately.
+        if hasattr(gate, "openapi_security_schema"):
+            self.openapi_security_schema = gate.openapi_security_schema
+
+    def __call__(self, request: Any) -> Any | None:
+        """Run layered authentication.
+
+        1. Call the gate — if it returns ``None``, return ``None`` (→ 401).
+        2. Check for an ``Authorization: Bearer`` header:
+           - Present → delegate to ``identity.authenticate(request, token)``.
+             Return the result (user object or ``None`` → 401).
+           - Absent → set ``request.auth = None`` and return a truthy sentinel
+             so Ninja considers auth passed (anonymous access).
+
+        The gate result is always stashed on ``request.gate_auth``.
+        """
+        # --- Gate (required) ---
+        gate_result = self._gate(request)
+        if gate_result is None:
+            return None
+
+        # Stash gate result for downstream access
+        request.gate_auth = gate_result
+
+        # --- Identity (optional) ---
+        auth_header = request.META.get("HTTP_AUTHORIZATION", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+            if not token:
+                # Empty token after "Bearer " — treat as missing
+                request.auth = None
+                return self._ANONYMOUS
+            result = self._identity.authenticate(request, token)
+            if result is None:
+                # Invalid/expired token — strict rejection
+                return None
+            return result
+
+        # No Bearer token — anonymous but authenticated via gate
+        request.auth = None
+        return self._ANONYMOUS
+
+    @property
+    def openapi_security_schemas(self) -> dict[str, Any]:
+        """Return both OpenAPI security schemas keyed by class name.
+
+        This mirrors how Django Ninja's OpenAPI builder names security
+        schemes (``auth.__class__.__name__``).  Use this for programmatic
+        access when you need to register both the gate and identity
+        schemes manually.
+
+        Returns:
+            A dict mapping class names to their ``SecuritySchema`` dicts.
+            E.g. ``{'ApiKeyAuth': {'type': 'apiKey', ...}, 'FirebaseAuth': {'type': 'http', ...}}``
+        """
+        schemes: dict[str, Any] = {}
+        if hasattr(self._gate, "openapi_security_schema"):
+            schemes[self._gate.__class__.__name__] = self._gate.openapi_security_schema
+        if hasattr(self._identity, "openapi_security_schema"):
+            schemes[self._identity.__class__.__name__] = self._identity.openapi_security_schema
+        return schemes

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `LayeredAuth` class in Django Ninja adapter for required gate + optional identity auth pattern (BFF endpoints). Composes a required auth gate (e.g. `ApiKeyAuth`) with an optional identity enrichment (e.g. `FirebaseAuth`). Stashes gate result on `request.gate_auth` and merges OpenAPI security schemes. ([#9](https://github.com/altissimo-hq/auth-providers-python/issues/9))
+
 ## [1.0.0] - 2026-06-07
 
 ### Added
