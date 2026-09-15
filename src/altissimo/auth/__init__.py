@@ -24,7 +24,7 @@ from .core.models import (
 try:
     __version__ = version("altissimo-auth")
 except PackageNotFoundError:
-    __version__ = "0.1.0"
+    __version__ = "1.0.0"
 
 __all__ = [
     "APIKeyRecord",

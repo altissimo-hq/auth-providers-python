@@ -8,6 +8,7 @@ a configurable :class:`OIDCPolicy`.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 import google.auth.exceptions
 import google.auth.transport.requests
@@ -92,11 +93,11 @@ class OIDCProvider:
             AuthForbiddenError: Token valid but caller not authorized.
         """
         valid_audiences = policy.valid_audiences.get(env, [])
-        id_info: dict | None = None
+        id_info: dict[str, Any] | None = None
 
         for audience in valid_audiences:
             try:
-                id_info = google.oauth2.id_token.verify_oauth2_token(
+                id_info = google.oauth2.id_token.verify_oauth2_token(  # type: ignore[no-untyped-call]
                     token,
                     google.auth.transport.requests.Request(),
                     audience=audience,

@@ -6,12 +6,18 @@ import json
 import urllib.request
 from enum import StrEnum
 from functools import wraps
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from flask import g, redirect, request, session, url_for
-from google.auth.transport import requests
-from google.oauth2 import id_token
-from google_auth_oauthlib.flow import Flow
+try:
+    from flask import g, redirect, request, session, url_for
+    from google.auth.transport import requests
+    from google.oauth2 import id_token
+    from google_auth_oauthlib.flow import Flow
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "flask and google-auth-oauthlib are required to use altissimo.auth.flask. "
+        "Install with: pip install altissimo-auth[flask]"
+    ) from exc
 
 from ..core.exceptions import AuthUnauthorizedError
 from ..core.models import AuthReasonCode, GoogleUser
@@ -89,7 +95,7 @@ class OAuth2FlowManager:
         if not credentials.id_token:
             raise AuthUnauthorizedError("No ID token provided", reason_code=AuthReasonCode.INVALID_GOOGLE_TOKEN)
 
-        id_info = id_token.verify_oauth2_token(
+        id_info = id_token.verify_oauth2_token(  # type: ignore[no-untyped-call]
             credentials.id_token,
             requests.Request(),
             audience=credentials.client_id,
@@ -169,7 +175,7 @@ class OAuth2FlowManager:
             if not id_tok or not client_id:
                 return None
             try:
-                id_info = id_token.verify_oauth2_token(
+                id_info = id_token.verify_oauth2_token(  # type: ignore[no-untyped-call]
                     id_tok,
                     requests.Request(),
                     audience=client_id,
@@ -178,7 +184,7 @@ class OAuth2FlowManager:
                     return None
                 if id_info.get("sub") != user_info["id"]:
                     return None
-                return user_info
+                return cast("dict[str, Any]", user_info)
             except Exception:
                 return None
         else:
@@ -194,7 +200,7 @@ class OAuth2FlowManager:
                     return None
                 if id_info.get("sub") != user_info["id"]:
                     return None
-                return user_info
+                return cast("dict[str, Any]", user_info)
             except Exception:
                 return None
 

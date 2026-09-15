@@ -18,13 +18,18 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import Depends, HTTPException, Request, Security, status
-from fastapi.security import (
-    APIKeyHeader,
-    APIKeyQuery,
-    HTTPAuthorizationCredentials,
-    HTTPBearer,
-)
+try:
+    from fastapi import Depends, HTTPException, Request, Security, status
+    from fastapi.security import (
+        APIKeyHeader,
+        APIKeyQuery,
+        HTTPAuthorizationCredentials,
+        HTTPBearer,
+    )
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "fastapi is required to use altissimo.auth.fastapi. Install it with: pip install altissimo-auth[fastapi]"
+    ) from exc
 
 from ..core.exceptions import AuthForbiddenError, AuthNotFoundError, AuthUnauthorizedError
 from ..core.models import AuthReasonCode, AuthSource
@@ -290,7 +295,7 @@ class Auth:
     # OIDC service account
 
     @staticmethod
-    def create_oidc_dependency(policy: OIDCPolicy) -> Callable:
+    def create_oidc_dependency(policy: OIDCPolicy) -> Callable[..., Any]:
         """Return a FastAPI dependency for OIDC service account auth.
 
         Usage::
@@ -342,7 +347,7 @@ class Auth:
     # JWT
 
     @staticmethod
-    def create_jwt_dependency(config: JWTConfig) -> Callable:
+    def create_jwt_dependency(config: JWTConfig) -> Callable[..., Any]:
         """Return a FastAPI dependency for generic JWT verification."""
 
         async def _dependency(

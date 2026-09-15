@@ -26,7 +26,7 @@ class AuthCascade:
             ...
     """
 
-    def __init__(self, auth_methods: list[Callable]) -> None:
+    def __init__(self, auth_methods: list[Callable[..., Any]]) -> None:
         """Initialize with a list of callable auth methods."""
         self.auth_methods = auth_methods
 

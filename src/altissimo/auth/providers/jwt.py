@@ -3,17 +3,22 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-import jwt
-from jwt.exceptions import (
-    DecodeError,
-    ExpiredSignatureError,
-    ImmatureSignatureError,
-    InvalidAlgorithmError,
-    InvalidIssuerError,
-    InvalidSignatureError,
-    InvalidTokenError,
-    MissingRequiredClaimError,
-)
+try:
+    import jwt
+    from jwt.exceptions import (
+        DecodeError,
+        ExpiredSignatureError,
+        ImmatureSignatureError,
+        InvalidAlgorithmError,
+        InvalidIssuerError,
+        InvalidSignatureError,
+        InvalidTokenError,
+        MissingRequiredClaimError,
+    )
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "pyjwt is required to use altissimo.auth.providers.jwt. Install it with: pip install altissimo-auth[jwt]"
+    ) from exc
 
 from ..core.exceptions import AuthUnauthorizedError
 from ..core.models import AuthReasonCode
@@ -51,7 +56,7 @@ class JWTProvider:
                 config.secret,
                 algorithms=config.algorithms,
                 audience=config.audience,
-                options=options,
+                options=options,  # type: ignore[arg-type]
             )
         except ExpiredSignatureError as e:
             raise AuthUnauthorizedError(str(e), reason_code=AuthReasonCode.EXPIRED_JWT) from e

@@ -289,13 +289,13 @@ def install_test_modules(
 
     # Build the module hierarchy
     mod_altissimo = types.ModuleType("altissimo")
-    mod_altissimo.__path__ = []  # type: ignore[attr-defined]
+    mod_altissimo.__path__ = []
 
     mod_auth = types.ModuleType("altissimo.auth")
-    mod_auth.__path__ = []  # type: ignore[attr-defined]
+    mod_auth.__path__ = []
 
     mod_core = types.ModuleType("altissimo.auth.core")
-    mod_core.__path__ = []  # type: ignore[attr-defined]
+    mod_core.__path__ = []
 
     mod_models = types.ModuleType("altissimo.auth.core.models")
     mod_exceptions = types.ModuleType("altissimo.auth.core.exceptions")
