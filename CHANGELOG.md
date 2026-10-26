@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-26
+
 ### Changed
 
 - Importing an adapter or provider whose optional dependency isn't installed
@@ -20,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - The fallback `__version__`, used when package metadata is unavailable, was
-  `0.1.0`; it is now `1.1.0`.
+  `0.1.0`; it now matches the release.
 
 ## [1.1.0] - 2026-10-26
 
