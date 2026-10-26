@@ -16,9 +16,14 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from ninja.security import APIKeyHeader as NinjaAPIKeyHeader
-from ninja.security import APIKeyQuery as NinjaAPIKeyQuery
-from ninja.security import HttpBearer as NinjaHttpBearer
+try:
+    from ninja.security import APIKeyHeader as NinjaAPIKeyHeader
+    from ninja.security import APIKeyQuery as NinjaAPIKeyQuery
+    from ninja.security import HttpBearer as NinjaHttpBearer
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "django-ninja is required to use altissimo.auth.ninja. Install it with: pip install altissimo-auth[ninja]"
+    ) from exc
 
 from ..core.exceptions import AuthError
 from ..core.models import AuthReasonCode, AuthSource

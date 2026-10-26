@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Importing an adapter or provider whose optional dependency isn't installed
+  (`altissimo.auth.fastapi`, `.flask`, `.ninja`, `.providers.firebase`,
+  `.providers.google`, `.providers.jwt`) raises an `ImportError` naming the extra
+  to install, e.g. `pip install "altissimo-auth[fastapi]"`, instead of a bare
+  `ModuleNotFoundError`.
+- mypy (strict) now runs in pre-commit, so in CI too. Type annotations were
+  tightened where it found gaps.
+
+### Fixed
+
+- The fallback `__version__`, used when package metadata is unavailable, was
+  `0.1.0`; it is now `1.1.0`.
+
 ## [1.1.0] - 2026-10-26
 
 First release published to PyPI, as `altissimo-auth`. The import name is

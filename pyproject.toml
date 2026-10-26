@@ -143,3 +143,16 @@ warn_unused_configs = true
 namespace_packages = true
 explicit_package_bases = true
 mypy_path = "src"
+
+# These optional-extra dependencies ship no inline types and no stub
+# package (or, for stripe, are an intentionally un-declared consumer-
+# installed dependency — see providers/webhooks.py) — ignore missing
+# stubs rather than suppressing errors line by line.
+[[tool.mypy.overrides]]
+module = [
+    "firebase_admin.*",
+    "google_auth_oauthlib.*",
+    "django.*",
+    "stripe.*",
+]
+ignore_missing_imports = true

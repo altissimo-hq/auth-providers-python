@@ -5,9 +5,15 @@ The ``google-auth`` package is an optional dependency — import this
 module only when the ``[google]`` extra is installed.
 """
 
-from google.auth.exceptions import InvalidValue, MalformedError
-from google.auth.transport import requests
-from google.oauth2 import id_token
+try:
+    from google.auth.exceptions import InvalidValue, MalformedError
+    from google.auth.transport import requests
+    from google.oauth2 import id_token
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "google-auth is required to use altissimo.auth.providers.google. "
+        "Install it with: pip install altissimo-auth[google]"
+    ) from exc
 
 from ..core.exceptions import AuthUnauthorizedError, GoogleTokenVerificationError
 from ..core.models import AuthReasonCode, GoogleTokenInfo, GoogleUser
@@ -26,7 +32,9 @@ class GoogleAuthProvider:
         """
 
         try:
-            token_info = id_token.verify_oauth2_token(google_id_token, requests.Request())
+            token_info = id_token.verify_oauth2_token(  # type: ignore[no-untyped-call]
+                google_id_token, requests.Request()
+            )
         except MalformedError as exc:
             raise GoogleTokenVerificationError(f"Malformed Header: {exc}") from exc
         except InvalidValue as exc:

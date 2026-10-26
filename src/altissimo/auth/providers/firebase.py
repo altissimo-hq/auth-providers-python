@@ -10,12 +10,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from firebase_admin import auth as firebase_auth
-from firebase_admin.auth import (
-    ExpiredIdTokenError,
-    InvalidIdTokenError,
-    RevokedIdTokenError,
-)
+try:
+    from firebase_admin import auth as firebase_auth
+    from firebase_admin.auth import (
+        ExpiredIdTokenError,
+        InvalidIdTokenError,
+        RevokedIdTokenError,
+    )
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "firebase-admin is required to use altissimo.auth.providers.firebase. "
+        "Install it with: pip install altissimo-auth[firebase]"
+    ) from exc
 
 from ..core.exceptions import AuthForbiddenError, AuthUnauthorizedError
 from ..core.models import AuthReasonCode, FirebaseUser
