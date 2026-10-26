@@ -29,13 +29,16 @@ Reusable, framework-agnostic authentication library for Python applications.
 
 ## Installation
 
+Published on PyPI as [`altissimo-auth`](https://pypi.org/project/altissimo-auth/);
+the import name is `altissimo.auth`.
+
 ```bash
-pip install altissimo-auth[fastapi]        # core + FastAPI adapter
-pip install altissimo-auth[ninja]          # core + Django Ninja adapter
-pip install altissimo-auth[flask]          # core + Flask OAuth2 adapter
-pip install altissimo-auth[firebase]       # core + Firebase provider
-pip install altissimo-auth[google]         # core + Google OAuth2/OIDC providers
-pip install altissimo-auth[all]            # everything
+pip install "altissimo-auth[fastapi]"        # core + FastAPI adapter
+pip install "altissimo-auth[ninja]"          # core + Django Ninja adapter
+pip install "altissimo-auth[flask]"          # core + Flask OAuth2 adapter
+pip install "altissimo-auth[firebase]"       # core + Firebase provider
+pip install "altissimo-auth[google]"         # core + Google OAuth2/OIDC providers
+pip install "altissimo-auth[all]"            # everything
 ```
 
 ## Quick Start
